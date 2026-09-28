@@ -46,6 +46,14 @@ async function metrics(width, height) {
 async function touch(type, points) {
   await call("Input.dispatchTouchEvent", { type, touchPoints: points.map((point) => ({ radiusX: 3, radiusY: 3, force: 1, ...point })) });
 }
+async function click(selector) {
+  const point = await evaluate(`(() => {
+    const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  })()`);
+  await call("Input.dispatchMouseEvent", { type: "mousePressed", button: "left", clickCount: 1, ...point });
+  await call("Input.dispatchMouseEvent", { type: "mouseReleased", button: "left", clickCount: 1, ...point });
+}
 async function screenshot(name) {
   const image = await call("Page.captureScreenshot", { format: "png" });
   await writeFile(join(root, ".tmp", name), Buffer.from(image.data, "base64"));
@@ -88,13 +96,37 @@ try {
     window.AudioContext = class extends NativeContext {
       constructor(options) { super(options); window.__contexts.push(this); }
       createOscillator() { window.__oscillators++; return super.createOscillator(); }
+      resume() {
+        if (window.__hangNextResume) {
+          window.__hangNextResume = false;
+          return new Promise(() => {});
+        }
+        return super.resume();
+      }
     };
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+      window.addEventListener(type, (event) => {
+        if (window.__dropPointerEnds) event.stopImmediatePropagation();
+      }, true);
+    }
+    for (const type of ['touchend', 'touchcancel']) {
+      window.addEventListener(type, (event) => {
+        if (window.__dropTouchEnds) event.stopImmediatePropagation();
+      }, true);
+    }
   ` });
   await call("Page.navigate", { url: appUrl });
   await until('document.querySelectorAll(".key").length === 24');
   await until('document.querySelector("#offline-state").textContent === "Ready for offline" && navigator.serviceWorker.controller');
   assert.equal(await evaluate('document.querySelectorAll(".white").length'), 14);
   assert.equal(await evaluate('document.querySelectorAll(".black").length'), 10);
+  assert.equal(await evaluate(`(() => {
+    const key = document.querySelector('.white').getBoundingClientRect();
+    const space = document.querySelector('.piano-space').getBoundingClientRect();
+    const strip = document.querySelector('.strip').getBoundingClientRect();
+    return Math.abs(key.height / key.width - 6) < .05 && space.height > 150
+      && Math.abs(strip.bottom - key.top) < 1;
+  })()`), true, "six-to-one keys, blank space above, chord strip directly above keys");
   assert.equal(await evaluate("window.__contexts.length"), 0, "audio is not created before the first tap");
   await mkdir(join(root, ".tmp"), { recursive: true });
   await screenshot("welcome.png");
@@ -122,6 +154,56 @@ try {
   assert.equal(await evaluate('document.querySelectorAll(".pressed").length'), 1);
   assert.equal(await evaluate('document.querySelector("#chord").textContent'), "");
   await touch("touchEnd", []);
+
+  // Reproduce missing pointer releases: native Touch Events must still clean up.
+  await evaluate('window.__dropPointerEnds = true');
+  await touch("touchStart", [points[0]]);
+  await touch("touchEnd", []);
+  assert.equal(await evaluate('document.querySelectorAll(".pressed").length'), 0);
+  // Drop both release streams, then ensure a fresh gesture unsticks the note.
+  await evaluate('window.__dropTouchEnds = true');
+  await touch("touchStart", [points[0]]);
+  await touch("touchEnd", []);
+  assert.equal(await evaluate('document.querySelectorAll(".pressed").length'), 1);
+  await evaluate('window.__dropTouchEnds = false');
+  const beforeRetouch = await evaluate('window.__oscillators');
+  await touch("touchStart", [points[0]]);
+  assert.equal(await evaluate('window.__oscillators'), beforeRetouch + 1);
+  await touch("touchEnd", []);
+  assert.equal(await evaluate('document.querySelectorAll(".pressed").length'), 0);
+  await evaluate('window.__dropPointerEnds = false');
+
+  const blank = await evaluate(`(() => {
+    const r = document.querySelector('.piano-space').getBoundingClientRect();
+    return { id: 1, x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  })()`);
+  await evaluate('window.__dropPointerEnds = window.__dropTouchEnds = true');
+  await touch("touchStart", [points[0]]);
+  await touch("touchEnd", []);
+  assert.equal(await evaluate('document.querySelectorAll(".pressed").length'), 1);
+  await evaluate('window.__dropPointerEnds = window.__dropTouchEnds = false');
+  const beforeBlank = await evaluate('window.__oscillators');
+  await touch("touchStart", [blank]);
+  assert.equal(await evaluate('document.querySelectorAll(".pressed").length'), 0, "a blank-space gesture clears stale touches");
+  await touch("touchMove", [points[0]]);
+  await touch("touchEnd", []);
+  assert.equal(await evaluate('window.__oscillators'), beforeBlank, "blank space is not playable, even when sliding onto keys");
+
+  await touch("touchStart", points);
+  await click("#reset");
+  await until('document.querySelector("#start-gate").hidden && window.__contexts.at(-1).state === "running"');
+  assert.equal(await evaluate('document.querySelectorAll(".pressed").length'), 0);
+  assert.equal(await evaluate('window.__contexts[0].state'), "closed", "Reset closes the old engine");
+  await touch("touchMove", points.map((p) => ({ ...p, x: p.x + 1 })));
+  assert.equal(await evaluate('document.querySelectorAll(".pressed").length'), 0, "held fingers cannot revive notes after Reset");
+  await touch("touchEnd", []);
+
+  // A never-settling Safari resume must still allow another user-triggered try.
+  await evaluate('window.__hangNextResume = true');
+  await click("#reset");
+  await until('!document.querySelector("#start-gate").hidden && !document.querySelector("#start").disabled');
+  await click("#start");
+  await until('document.querySelector("#start-gate").hidden');
   await touch("touchStart", points);
   await metrics(834, 1194);
   await until('getComputedStyle(document.querySelector(".rotate")).display === "flex" && document.querySelectorAll(".pressed").length === 0');
@@ -131,7 +213,7 @@ try {
   await until('getComputedStyle(document.querySelector(".instrument")).display !== "none"');
   await delay(100); // allow the orientation-change event and ResizeObserver to settle
   await touch("touchStart", [points[0]]);
-  await until('window.__contexts[0].state === "running"');
+  await until('window.__contexts.at(-1).state === "running"');
   await evaluate('window.dispatchEvent(new Event("blur"))');
   assert.equal(await evaluate('document.querySelectorAll(".pressed").length'), 0);
   await touch("touchCancel", []);
@@ -146,7 +228,7 @@ try {
   assert.equal(await evaluate('document.querySelector("#chord").textContent'), "Cmaj9", "offline reload plays and detects chords");
   await touch("touchEnd", []);
   assert.deepEqual(errors, [], "no uncaught browser exceptions");
-  console.log("PASS: 24-key layout, real Web Audio, six-note touch chord, glide, shared key, rotation/blur cleanup, wake, offline reload. Screenshots in .tmp/");
+  console.log("PASS: piano proportions, inert blank space, real audio, six-note touch/glide/shared keys, missing-release recovery, Reset, hung-resume recovery, rotation/blur/wake, offline reload. Screenshots in .tmp/");
 } finally {
   ws?.close();
   for (const { timer } of pending.values()) clearTimeout(timer);

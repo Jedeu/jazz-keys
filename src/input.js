@@ -47,6 +47,52 @@ export class NoteContacts {
   }
 }
 
+// Touch Events supply the complete live finger list, unlike individual pointer
+// events. Reconcile against it on every gesture so a missed release cannot keep
+// a note latched. Mouse/pen/keyboard contacts are deliberately left alone.
+export class TouchInput {
+  constructor(contacts, noteAt) {
+    this.contacts = contacts;
+    this.noteAt = noteAt;
+  }
+
+  reconcile(event) {
+    const live = new Set(Array.from(event.touches, (touch) => `touch:${touch.identifier}`));
+    for (const id of this.contacts.contacts.keys()) {
+      if (typeof id === "string" && id.startsWith("touch:") && !live.has(id)) this.contacts.end(id);
+    }
+  }
+
+  begin(event) {
+    // A new touch may reuse a missed-release ID, even when it starts in the
+    // blank space. Run this in document capture before any keyboard handler.
+    for (const touch of event.changedTouches) this.contacts.end(`touch:${touch.identifier}`);
+    this.reconcile(event);
+  }
+
+  start(event) {
+    this.begin(event);
+    for (const touch of event.changedTouches) {
+      this.contacts.set(`touch:${touch.identifier}`, this.noteAt(touch.clientX, touch.clientY));
+    }
+  }
+
+  move(event) {
+    this.reconcile(event);
+    for (const touch of event.changedTouches) {
+      const id = `touch:${touch.identifier}`;
+      // Never activate a touch that began in the non-playing space, or revive
+      // an old finger after Reset/blur until it has been lifted and retouched.
+      if (this.contacts.has(id)) this.contacts.set(id, this.noteAt(touch.clientX, touch.clientY));
+    }
+  }
+
+  end(event) {
+    for (const touch of event.changedTouches) this.contacts.end(`touch:${touch.identifier}`);
+    this.reconcile(event);
+  }
+}
+
 // Rectangles are cached on layout changes, not read on every touch event.
 // Black keys win where their rectangles overlap the white keys beneath them.
 export function hitTest(x, y, rectangles) {

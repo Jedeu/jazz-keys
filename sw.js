@@ -1,6 +1,6 @@
 // Bump this version whenever a shipped app-shell file changes.
 const PREFIX = `jazz-keys:${self.registration.scope}:`;
-const CACHE = `${PREFIX}v1`;
+const CACHE = `${PREFIX}v2`;
 const ASSETS = [
   "./index.html",
   "./styles.css",

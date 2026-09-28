@@ -17,10 +17,11 @@
 </head>
 <body>
   <main class="instrument" aria-label="Jazz chord keyboard">
+    <div class="piano-space" aria-hidden="true"></div>
     <header class="strip">
       <div class="wordmark"><span class="brand-mark" aria-hidden="true">Ⅲ</span> JAZZ <span class="wordmark-light">KEYS</span></div>
       <output id="chord" class="chord" aria-label="Detected chord" aria-live="polite" aria-atomic="true"></output>
-      <div class="status"><span id="audio-state">Sound off</span><span class="status-dot" id="audio-dot" aria-hidden="true"></span></div>
+      <div class="status"><span id="audio-state">Sound off</span><span class="status-dot" id="audio-dot" aria-hidden="true"></span><button id="reset" class="reset-button" type="button" aria-label="Reset keys and sound" title="Release all keys and restart sound" disabled>Reset</button></div>
     </header>
     <div id="keyboard" class="keyboard" role="group" aria-label="Piano, C3 through B4"></div>
     <section id="start-gate" class="start-gate" aria-labelledby="welcome-title">
@@ -30,7 +31,7 @@
         <p>Two octaves. Both hands. Just play.</p>
         <button id="start" class="start-button" type="button">Tap to play <span aria-hidden="true">↗</span></button>
         <p id="start-message" class="small-note" role="status">One tap turns on sound. Use your iPad’s volume buttons.</p>
-        <div class="welcome-footer"><span>C3 — B4</span><span id="offline-state" role="status">Preparing offline access…</span></div>
+        <div class="welcome-footer"><span>C3 — B4 · v2</span><span id="offline-state" role="status">Preparing offline access…</span></div>
       </div>
     </section>
   </main>

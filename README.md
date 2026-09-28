@@ -15,6 +15,14 @@ GitHub Pages hosts the app. No local server or running computer is needed.
 
 The site and [source repository](https://github.com/Jedeu/jazz-keys) are public.
 
+### v2: shorter keys and touch recovery
+
+The keyboard still spans the width, but white keys are now approximately **6:1 in length to width**, with non-playing space above the chord strip. On an 1194 × 834 viewport, key length drops from about 790 px to 512 px. Short viewports can shrink the keys further.
+
+Touch input now reconciles against the current finger list, so a missed release or reused touch ID can be cleaned up on the next event. The small **Reset** button clears all keys and recreates the sound engine without reloading the page. A hung audio-start request times out rather than leaving the start button disabled forever. No input polling or permanent timers were added.
+
+**To get the update:** open/reload the app while online, leave it open briefly to download, then close all Jazz Keys Safari tabs and the Home Screen app. Reopen it; **v2** appears at the bottom of the welcome screen. Updates intentionally do not replace a session while you're playing.
+
 ## Try it on this Mac
 
 If Node is already installed:
@@ -49,13 +57,13 @@ The app makes no API, telemetry, CDN, font, or sample requests. Initial installa
 ## Playing
 
 - Landscape, **C3–B4**: 24 semitones, 14 white keys and 10 black keys.
-- Tap once to unlock audio, then play with both hands. Use the iPad’s volume buttons; start at a comfortable volume.
+- Tap once to unlock audio, then play with both hands. Keep **Silent Mode off** and use the iPad’s volume buttons; start at a comfortable volume.
 - Use built-in speakers or a wired connection for latency testing. Bluetooth can add noticeable delay.
 - Moving within a key does not retrigger it. Crossing into another key deliberately releases the old note and plays the new one. Two fingers sharing a key share one voice until the last finger leaves.
 - Notes have a short, piano-like decay even if held; there is no sustain pedal. This is a lightweight synthesized approximation, not a sampled acoustic piano.
 - The chord strip follows **held keys**, not fading release tails. It is blank with fewer than three distinct pitch classes; `—` means no supported match.
 - The sound engine rests about 30 seconds after the last voice finishes. The next new note wakes it. Locking, switching away, or rotating releases all notes and suspends audio immediately.
-- If Safari interrupts audio, use **Tap to resume**. If sound is missing, check volume/output routing and try reopening the app.
+- If Safari interrupts audio, use **Tap to resume**. If keys or sound get stuck, tap **Reset** in the strip, then lift and retouch the keys. If sound is missing, check Silent Mode, volume, and output routing.
 - iPadOS system gestures can intercept multi-finger touches. If that happens, check your version’s multitasking/gesture options in iPad Settings. The app cleans up canceled touches, but cannot disable OS gestures.
 - Desktop access: use the mouse, or Tab to a key and hold Space/Enter. There is no computer-keyboard piano mapping.
 
@@ -90,7 +98,7 @@ Use about **40% brightness** and **Low Power Mode**. The dark palette is for com
 npm test
 ```
 
-Uses only Node’s test runner (Node 22+ recommended). Covers transposed chord families, shells, inversions, ambiguities, ten contacts, shared notes, glide hit-testing, voice cleanup, idle sleep, and suspend/resume races. Audio unit tests use a fake context; they do not assess timbre or real latency.
+Uses only Node’s test runner (Node 22+ recommended). Covers transposed chord families, shells, inversions, ambiguities, ten contacts, shared notes, missed releases, reused touch IDs, inert-space touches, glide hit-testing, engine disposal, idle sleep, and suspend/resume races. Audio unit tests use a fake context; they do not assess timbre or real latency.
 
 Optional real-browser smoke test with **already installed Chrome** and Node 22+:
 
@@ -102,7 +110,7 @@ APP_URL=https://jedeu.github.io/jazz-keys/ node scripts/browser-smoke.mjs
 CHROME_BIN=/path/to/chrome node scripts/browser-smoke.mjs
 ```
 
-No packages or browsers are downloaded. It runs real Web Audio in headless Chrome, injects six simultaneous touches, tests glide/shared keys, rotation/blur cleanup, wake, and offline reload. Screenshots go in `.tmp/`. This is not an iPad Safari test.
+No packages or browsers are downloaded. It runs real Web Audio in headless Chrome, injects six simultaneous touches, checks the new proportions and inert space, simulates dropped release events and hung resume promises, and tests Reset, glide/shared keys, rotation/blur cleanup, wake, and offline reload. Screenshots go in `.tmp/`. This is not an iPad Safari test.
 
 ### iPad acceptance checklist — still required
 
@@ -110,6 +118,8 @@ No packages or browsers are downloaded. It runs real Web Audio in headless Chrom
 - [ ] Six to ten fingers sound together, including mixed white/black keys. No unwanted OS gesture takes over.
 - [ ] Gliding sounds only new keys; shared-key releases don’t cut off the other finger.
 - [ ] No stuck notes after lifting, canceled touches, rotation, locking, or app switching.
+- [ ] Keys feel appropriately proportioned; touching the empty space never plays a note.
+- [ ] Reset clears all keys and restores playing without a page refresh.
 - [ ] After 30 seconds of silence, the status says **Resting**; a new note wakes it promptly.
 - [ ] Airplane Mode + fully closed app + Home Screen reopen still plays and names chords.
 - [ ] Touch-to-sound feels under 50 ms with built-in speakers/wired audio. Check idle wake separately.
@@ -121,13 +131,13 @@ No packages or browsers are downloaded. It runs real Web Audio in headless Chrom
 ## Files and updates
 
 - `index.html`, `styles.css`: playing surface and portrait/start screens
-- `src/app.js`, `src/input.js`: DOM, pointer capture, note ownership and lifecycle
+- `src/app.js`, `src/input.js`: DOM, native touch reconciliation, pointer capture, note ownership and lifecycle
 - `src/audio.js`: oscillator synthesis and idle suspension
 - `src/chords.js`: deterministic chord matching
 - `sw.js`, `manifest.webmanifest`, `icons/`: offline/Home Screen support
 - `tests/`, `scripts/`: optional development checks; not app dependencies
 
-When publishing a change, bump `v1` in `sw.js`. All app-shell files cache atomically. Updates wait until existing tabs/app windows close, so a playing session is not replaced mid-chord. Reopen online to fetch an update, close all instances, then reopen to activate it. After changing the icon art, `python3 scripts/make-icons.py` regenerates the included PNGs with Python’s standard library.
+When publishing a change, bump the cache version (currently `v2`) in `sw.js`. All app-shell files cache atomically. Updates wait until existing tabs/app windows close, so a playing session is not replaced mid-chord. Reopen online to fetch an update, close all instances, then reopen to activate it. After changing the icon art, `python3 scripts/make-icons.py` regenerates the included PNGs with Python’s standard library.
 
 ## Setup references
 
@@ -135,3 +145,5 @@ When publishing a change, bump `v1` in `sw.js`. All app-shell files cache atomic
 - [GitHub: create a Pages site; free/public hosting requirements](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site)
 - [MDN: service workers and HTTPS requirements](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers)
 - [MDN: Web Audio user-gesture requirements](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices)
+- [MDN: the live touch list](https://developer.mozilla.org/en-US/docs/Web/API/TouchEvent/touches)
+- [MDN: changed touches and cancellation](https://developer.mozilla.org/en-US/docs/Web/API/TouchEvent/changedTouches)

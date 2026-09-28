@@ -33,6 +33,7 @@ class FakeContext {
   createPeriodicWave() { return {}; }
   resume() { this.resumeCalls++; this.state = "running"; return Promise.resolve(); }
   suspend() { this.state = "suspended"; return Promise.resolve(); }
+  close() { this.state = "closed"; return Promise.resolve(); }
 }
 function setup(t) {
   t.mock.timers.enable({ apis: ["setTimeout"] });
@@ -142,6 +143,39 @@ test("resume reverses a pending suspend even if state still reports running", as
   assert.equal(audio.context.state, "running");
   assert.equal(audio.active.size, 1, "the first note survives the transition");
   assert.equal(audio.resuming, 0);
+});
+test("Reset disposes all voices and the old audio graph", async (t) => {
+  const audio = setup(t);
+  await audio.resume();
+  audio.noteOn(60);
+  const voice = audio.active.get(60);
+  audio.dispose();
+  assert.equal(audio.context.state, "closed");
+  assert.equal(audio.context.onstatechange, null);
+  assert.equal(audio.sounding.size, 0);
+  assert.equal(audio.active.size, 0);
+  assert.equal(voice.oscillator.disconnected, true);
+  assert.equal(audio.master.disconnected, true);
+  assert.equal(audio.compressor.disconnected, true);
+  await assert.rejects(audio.resume(), /reset/);
+  audio.noteOn(60);
+  assert.equal(audio.sounding.size, 0);
+  t.mock.timers.tick(IDLE_MS);
+  assert.equal(audio.context.state, "closed");
+});
+test("a late resume completion cannot revive a disposed engine", async (t) => {
+  const audio = setup(t);
+  await audio.resume();
+  let finishResume;
+  audio.context.resume = () => new Promise((resolve) => { finishResume = resolve; });
+  const wake = audio.resume();
+  audio.dispose();
+  finishResume();
+  await wake;
+  assert.equal(audio.context.state, "closed");
+  assert.equal(audio.resuming, 0);
+  t.mock.timers.tick(IDLE_MS);
+  assert.equal(audio.context.state, "closed");
 });
 test("a newer background suspension wins over an in-flight resume", async (t) => {
   const audio = setup(t);

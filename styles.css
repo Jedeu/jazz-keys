@@ -16,11 +16,13 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: -5px; }
   position: relative;
   display: flex;
   flex-direction: column;
+  touch-action: none;
   width: 100%;
   height: 100vh;
   height: 100dvh;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
+.piano-space { flex: 1; min-height: 24px; }
 .strip {
   flex: 0 0 44px;
   display: grid;
@@ -35,9 +37,14 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: -5px; }
 .brand-mark { display: inline-block; color: var(--accent); font-size: 20px; margin-right: 9px; vertical-align: -2px; }
 .chord { color: var(--accent); font-size: 25px; font-weight: 500; line-height: 1; letter-spacing: -.6px; min-height: 26px; }
 .status { justify-self: end; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 10px; letter-spacing: .3px; }
+.reset-button { align-self: stretch; min-width: 48px; min-height: 44px; margin-left: 4px; padding: 0 8px; border: 0; border-left: 1px solid #363c37; background: transparent; color: var(--muted); font-size: 11px; cursor: pointer; touch-action: manipulation; }
+.reset-button:active { color: var(--accent); }
+.reset-button:disabled { opacity: .4; cursor: default; }
 .status-dot { width: 5px; height: 5px; border-radius: 50%; background: #697069; }
 .status-dot.awake { background: var(--accent); }
-.keyboard { position: relative; flex: 1; min-height: 0; isolation: isolate; touch-action: none; }
+/* Fourteen white keys, each about six widths long. Shrink only when the
+   viewport is too short; otherwise the unused space stays above the strip. */
+.keyboard { position: relative; flex: 0 1 auto; height: calc((100vw - env(safe-area-inset-left) - env(safe-area-inset-right)) * 6 / 14); min-height: 0; isolation: isolate; touch-action: none; }
 .key {
   position: absolute;
   top: 0;
@@ -78,7 +85,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: -5px; }
 .black .key-label { bottom: 19px; font-size: 10px; }
 .key.pressed { background: var(--accent); color: #233021; border-bottom-color: #8daf85; }
 .key.pressed::after { content: ""; position: absolute; bottom: 10px; left: calc(50% - 2px); width: 4px; height: 4px; border-radius: 50%; background: #344b30; }
-.start-gate { position: absolute; inset: calc(44px + env(safe-area-inset-top)) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); z-index: 5; display: grid; place-items: center; background: #141716ec; padding: 24px; }
+.start-gate { position: absolute; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); z-index: 5; display: grid; place-items: center; background: #141716ec; padding: 24px; }
 .welcome { width: min(440px, 100%); text-align: center; }
 .eyebrow { color: var(--accent); font-size: 10px; font-weight: 500; letter-spacing: 2.4px; }
 h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(38px, 5.7vw, 68px); line-height: 1.03; font-weight: 400; letter-spacing: -2px; margin: 24px 0 18px; }

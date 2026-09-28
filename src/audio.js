@@ -20,6 +20,7 @@ export function envelopeAt(points, time) {
 export class PianoAudio {
   constructor(onState = () => {}) {
     this.context = null;
+    this.disposed = false;
     this.active = new Map();
     this.sounding = new Set();
     this.idleTimer = null;
@@ -50,6 +51,7 @@ export class PianoAudio {
 
   // Call directly within a user event, before awaiting anything.
   resume() {
+    if (this.disposed) return Promise.reject(new Error("This audio engine has been reset."));
     if (!this.context) this.create();
     clearTimeout(this.idleTimer);
     this.sleeping = false;
@@ -58,12 +60,13 @@ export class PianoAudio {
     // Always request resume in the gesture, even if state still says running:
     // a suspend operation may have been queued on the audio thread already.
     return this.context.resume().then(async () => {
+      if (this.disposed) return;
       if (pendingSuspend) {
         await pendingSuspend;
-        if (!this.sleeping) await this.context.resume();
+        if (!this.sleeping && !this.disposed) await this.context.resume();
       }
-      // A newer lock/blur request wins over an older in-flight resume.
-      if (this.sleeping) return;
+      // A newer lock/blur/reset request wins over an older in-flight resume.
+      if (this.sleeping || this.disposed) return;
       if (this.context.state !== "running") throw new Error("Sound is paused. Tap to try again.");
       this.onState("running");
       if (!this.sounding.size) this.scheduleSleep();
@@ -71,7 +74,7 @@ export class PianoAudio {
   }
 
   noteOn(midi) {
-    if (!this.context || this.context.state === "closed") return;
+    if (this.disposed || !this.context || this.context.state === "closed") return;
     clearTimeout(this.idleTimer);
     this.noteOff(midi);
     // Bound release tails even during very fast glissandi.
@@ -132,7 +135,7 @@ export class PianoAudio {
 
   scheduleSleep() {
     clearTimeout(this.idleTimer);
-    if (this.context?.state !== "running") return;
+    if (this.disposed || this.context?.state !== "running") return;
     this.idleTimer = setTimeout(() => {
       if (this.sounding.size || this.context.state !== "running") return;
       this.suspend();
@@ -146,6 +149,18 @@ export class PianoAudio {
     pending.finally(() => {
       if (this.pendingSuspend === pending) this.pendingSuspend = null;
     });
+  }
+
+  dispose() {
+    this.disposed = true;
+    this.onState = () => {};
+    if (this.context) this.context.onstatechange = null;
+    this.silence();
+    this.master?.disconnect();
+    this.compressor?.disconnect();
+    // Don't block a user-triggered recovery on another potentially stuck
+    // audio-thread promise. Old callbacks are detached before closing.
+    if (this.context && this.context.state !== "closed") this.context.close().catch(() => {});
   }
 
   // On lock, tab switch, or orientation change, leave no voices to resume later.
