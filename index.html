@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#141716">
+  <meta name="description" content="A quiet, two-octave jazz piano. Made for touch. Works offline.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Jazz Keys">
+  <title>Jazz Keys</title>
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./src/app.js"></script>
+</head>
+<body>
+  <main class="instrument" aria-label="Jazz chord keyboard">
+    <header class="strip">
+      <div class="wordmark"><span class="brand-mark" aria-hidden="true">Ⅲ</span> JAZZ <span class="wordmark-light">KEYS</span></div>
+      <output id="chord" class="chord" aria-label="Detected chord" aria-live="polite" aria-atomic="true"></output>
+      <div class="status"><span id="audio-state">Sound off</span><span class="status-dot" id="audio-dot" aria-hidden="true"></span></div>
+    </header>
+    <div id="keyboard" class="keyboard" role="group" aria-label="Piano, C3 through B4"></div>
+    <section id="start-gate" class="start-gate" aria-labelledby="welcome-title">
+      <div class="welcome">
+        <div class="eyebrow">YOUR EVERYDAY PIANO</div>
+        <h1 id="welcome-title">A little room<br>for jazz.</h1>
+        <p>Two octaves. Both hands. Just play.</p>
+        <button id="start" class="start-button" type="button">Tap to play <span aria-hidden="true">↗</span></button>
+        <p id="start-message" class="small-note" role="status">One tap turns on sound. Use your iPad’s volume buttons.</p>
+        <div class="welcome-footer"><span>C3 — B4</span><span id="offline-state" role="status">Preparing offline access…</span></div>
+      </div>
+    </section>
+  </main>
+  <section class="rotate" aria-labelledby="rotate-title">
+    <svg class="rotate-icon" viewBox="0 0 100 80" fill="none" aria-hidden="true"><rect x="19" y="15" width="62" height="44" rx="6" stroke="currentColor" stroke-width="2"/><path d="M42 69h16M8 35A40 40 0 0 1 65 4m0 0-11-1m11 1-4 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <div class="eyebrow">A LITTLE MORE ROOM</div>
+    <h1 id="rotate-title">Rotate your iPad.</h1>
+    <p>This piano plays in landscape.<br>Turn off Rotation Lock if you need to.</p>
+  </section>
+  <noscript><div class="no-script">Jazz Keys needs JavaScript enabled in Safari to play.</div></noscript>
+</body>
+</html>
