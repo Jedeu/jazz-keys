@@ -116,17 +116,35 @@ try {
     }
   ` });
   await call("Page.navigate", { url: appUrl });
-  await until('document.querySelectorAll(".key").length === 24');
+  await until('document.querySelectorAll(".key").length === 36');
   await until('document.querySelector("#offline-state").textContent === "Ready for offline" && navigator.serviceWorker.controller');
-  assert.equal(await evaluate('document.querySelectorAll(".white").length'), 14);
-  assert.equal(await evaluate('document.querySelectorAll(".black").length'), 10);
-  assert.equal(await evaluate(`(() => {
-    const key = document.querySelector('.white').getBoundingClientRect();
-    const space = document.querySelector('.piano-space').getBoundingClientRect();
-    const strip = document.querySelector('.strip').getBoundingClientRect();
-    return Math.abs(key.height / key.width - 6) < .05 && space.height > 150
-      && Math.abs(strip.bottom - key.top) < 1;
-  })()`), true, "six-to-one keys, blank space above, chord strip directly above keys");
+  assert.equal(await evaluate('document.querySelectorAll(".white").length'), 21);
+  assert.equal(await evaluate('document.querySelectorAll(".black").length'), 15);
+  assert.deepEqual(await evaluate('Array.from(document.querySelectorAll(".key"), (key) => Number(key.dataset.note))'), Array.from({ length: 36 }, (_, i) => 48 + i));
+  // Explicit screen-height rule, not a width-derived approximation. Check
+  // several iPad viewports and a short landscape viewport before returning.
+  for (const [width, height] of [[1180, 820], [1024, 768], [1366, 1024], [844, 390], [1194, 834]]) {
+    await metrics(width, height);
+    await until(`Math.abs(document.querySelector('.keyboard').getBoundingClientRect().height - ${height} * 2 / 3) < 1`);
+    const layout = await evaluate(`(() => {
+      const whites = [...document.querySelectorAll('.white')].map((key) => key.getBoundingClientRect());
+      const black = document.querySelector('.black').getBoundingClientRect();
+      const space = document.querySelector('.piano-space').getBoundingClientRect();
+      const strip = document.querySelector('.strip').getBoundingClientRect();
+      return {
+        height: whites[0].height, width: whites[0].width,
+        left: whites[0].left, right: whites.at(-1).right, bottom: whites[0].bottom,
+        spaceHeight: space.height, stripGap: whites[0].top - strip.bottom,
+        blackLength: black.height / whites[0].height,
+      };
+    })()`);
+    assert.ok(Math.abs(layout.height - height * 2 / 3) < 1, `${width}×${height}: exactly two-thirds height`);
+    assert.ok(Math.abs(layout.width - width / 21) < 1, "21 equal white keys across the width");
+    assert.ok(Math.abs(layout.left) < 1 && Math.abs(layout.right - width) < 1, "C3 to B5 fills the width");
+    assert.ok(Math.abs(layout.bottom - height) < 1 && layout.spaceHeight >= 24, "keys stay at the bottom, inactive space above");
+    assert.ok(Math.abs(layout.stripGap) < 1, "chord strip sits immediately above the keys");
+    assert.ok(Math.abs(layout.blackLength - .61) < .01, "black keys remain shorter than white keys");
+  }
   assert.equal(await evaluate("window.__contexts.length"), 0, "audio is not created before the first tap");
   await mkdir(join(root, ".tmp"), { recursive: true });
   await screenshot("welcome.png");
@@ -153,6 +171,26 @@ try {
   await touch("touchEnd", points);
   assert.equal(await evaluate('document.querySelectorAll(".pressed").length'), 1);
   assert.equal(await evaluate('document.querySelector("#chord").textContent'), "");
+  await touch("touchEnd", []);
+
+  // Hit-test every white/black key, including the new third octave and B5 edge.
+  const allKeyPoints = await evaluate(`Array.from(document.querySelectorAll('.key'), (key) => {
+    const r = key.getBoundingClientRect();
+    return { note: Number(key.dataset.note), id: 1, x: r.x + r.width / 2,
+      y: r.y + r.height * (key.classList.contains('black') ? .5 : .82) };
+  })`);
+  for (const { note, ...point } of allKeyPoints) {
+    const before = await evaluate('window.__oscillators');
+    await touch("touchStart", [point]);
+    assert.equal(await evaluate('document.querySelector(".pressed")?.dataset.note'), String(note));
+    assert.equal(await evaluate('window.__oscillators'), before + 1, `MIDI ${note} starts a voice`);
+    await touch("touchEnd", []);
+    assert.equal(await evaluate('document.querySelectorAll(".pressed").length'), 0);
+  }
+  const upperChord = allKeyPoints.filter((p) => [72, 76, 79, 83].includes(p.note))
+    .map(({ note, ...point }, index) => ({ ...point, id: index + 1 }));
+  await touch("touchStart", upperChord);
+  assert.equal(await evaluate('document.querySelector("#chord").textContent'), "Cmaj7", "C5 E5 G5 B5 is recognized");
   await touch("touchEnd", []);
 
   // Reproduce missing pointer releases: native Touch Events must still clean up.
@@ -220,7 +258,7 @@ try {
 
   await call("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
   await call("Page.reload");
-  await until('document.querySelectorAll(".key").length === 24 && document.querySelector("#start-gate").hidden === false');
+  await until('document.querySelectorAll(".key").length === 36 && document.querySelector("#start-gate").hidden === false');
   await touch("touchStart", [{ ...button, id: 1 }]);
   await touch("touchEnd", []);
   await until('document.querySelector("#start-gate").hidden');
@@ -228,7 +266,7 @@ try {
   assert.equal(await evaluate('document.querySelector("#chord").textContent'), "Cmaj9", "offline reload plays and detects chords");
   await touch("touchEnd", []);
   assert.deepEqual(errors, [], "no uncaught browser exceptions");
-  console.log("PASS: piano proportions, inert blank space, real audio, six-note touch/glide/shared keys, missing-release recovery, Reset, hung-resume recovery, rotation/blur/wake, offline reload. Screenshots in .tmp/");
+  console.log("PASS: 36 playable keys C3–B5, two-thirds height at five viewport sizes, upper-octave chords, inert blank space, real audio, six-note touch/glide/shared keys, release/Reset/hung-resume recovery, rotation/blur/wake, offline reload. Screenshots in .tmp/");
 } finally {
   ws?.close();
   for (const { timer } of pending.values()) clearTimeout(timer);

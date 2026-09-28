@@ -15,13 +15,15 @@ GitHub Pages hosts the app. No local server or running computer is needed.
 
 The site and [source repository](https://github.com/Jedeu/jazz-keys) are public.
 
-### v2: shorter keys and touch recovery
+### v3: three octaves, two-thirds screen height
 
-The keyboard still spans the width, but white keys are now approximately **6:1 in length to width**, with non-playing space above the chord strip. On an 1194 × 834 viewport, key length drops from about 790 px to 512 px. Short viewports can shrink the keys further.
+The keyboard spans the full width and covers **C3–B5: 36 keys across three octaves** (21 white, 15 black). White keys occupy **exactly two-thirds of the visible viewport height**; the chord strip and non-playing space sit above them. For example, an 834 px-high viewport gives 556 px-long white keys. The height follows Safari's visible viewport as its toolbars change.
+
+This is the user's chosen screen-based layout, not a claim of measured acoustic-piano proportions. Black keys retain the existing 61% relative length and 62% relative width. The earlier heuristic 6:1 white-key ratio has been removed.
 
 Touch input now reconciles against the current finger list, so a missed release or reused touch ID can be cleaned up on the next event. The small **Reset** button clears all keys and recreates the sound engine without reloading the page. A hung audio-start request times out rather than leaving the start button disabled forever. No input polling or permanent timers were added.
 
-**To get the update:** open/reload the app while online, leave it open briefly to download, then close all Jazz Keys Safari tabs and the Home Screen app. Reopen it; **v2** appears at the bottom of the welcome screen. Updates intentionally do not replace a session while you're playing.
+**To get the update:** open/reload the app while online, leave it open briefly to download, then close all Jazz Keys Safari tabs and the Home Screen app. Reopen it; **v3** appears at the bottom of the welcome screen. Updates intentionally do not replace a session while you're playing.
 
 ## Try it on this Mac
 
@@ -56,7 +58,7 @@ The app makes no API, telemetry, CDN, font, or sample requests. Initial installa
 
 ## Playing
 
-- Landscape, **C3–B4**: 24 semitones, 14 white keys and 10 black keys.
+- Landscape, **C3–B5**: 36 semitones, 21 white keys and 15 black keys.
 - Tap once to unlock audio, then play with both hands. Keep **Silent Mode off** and use the iPad’s volume buttons; start at a comfortable volume.
 - Use built-in speakers or a wired connection for latency testing. Bluetooth can add noticeable delay.
 - Moving within a key does not retrigger it. Crossing into another key deliberately releases the old note and plays the new one. Two fingers sharing a key share one voice until the last finger leaves.
@@ -110,7 +112,7 @@ APP_URL=https://jedeu.github.io/jazz-keys/ node scripts/browser-smoke.mjs
 CHROME_BIN=/path/to/chrome node scripts/browser-smoke.mjs
 ```
 
-No packages or browsers are downloaded. It runs real Web Audio in headless Chrome, injects six simultaneous touches, checks the new proportions and inert space, simulates dropped release events and hung resume promises, and tests Reset, glide/shared keys, rotation/blur cleanup, wake, and offline reload. Screenshots go in `.tmp/`. This is not an iPad Safari test.
+No packages or browsers are downloaded. It runs real Web Audio in headless Chrome, injects six simultaneous touches, checks the three-octave range, two-thirds-height layout at multiple viewport sizes, upper-octave input, and inert space, simulates dropped release events and hung resume promises, and tests Reset, glide/shared keys, rotation/blur cleanup, wake, and offline reload. Screenshots go in `.tmp/`. This is not an iPad Safari test.
 
 ### iPad acceptance checklist — still required
 
@@ -118,7 +120,7 @@ No packages or browsers are downloaded. It runs real Web Audio in headless Chrom
 - [ ] Six to ten fingers sound together, including mixed white/black keys. No unwanted OS gesture takes over.
 - [ ] Gliding sounds only new keys; shared-key releases don’t cut off the other finger.
 - [ ] No stuck notes after lifting, canceled touches, rotation, locking, or app switching.
-- [ ] Keys feel appropriately proportioned; touching the empty space never plays a note.
+- [ ] All three octaves (C3–B5) are playable; white keys fill two-thirds of the visible screen height and touching the empty space never plays a note.
 - [ ] Reset clears all keys and restores playing without a page refresh.
 - [ ] After 30 seconds of silence, the status says **Resting**; a new note wakes it promptly.
 - [ ] Airplane Mode + fully closed app + Home Screen reopen still plays and names chords.
@@ -137,7 +139,7 @@ No packages or browsers are downloaded. It runs real Web Audio in headless Chrom
 - `sw.js`, `manifest.webmanifest`, `icons/`: offline/Home Screen support
 - `tests/`, `scripts/`: optional development checks; not app dependencies
 
-When publishing a change, bump the cache version (currently `v2`) in `sw.js`. All app-shell files cache atomically. Updates wait until existing tabs/app windows close, so a playing session is not replaced mid-chord. Reopen online to fetch an update, close all instances, then reopen to activate it. After changing the icon art, `python3 scripts/make-icons.py` regenerates the included PNGs with Python’s standard library.
+When publishing a change, bump the cache version (currently `v3`) in `sw.js`. All app-shell files cache atomically. Updates wait until existing tabs/app windows close, so a playing session is not replaced mid-chord. Reopen online to fetch an update, close all instances, then reopen to activate it. After changing the icon art, `python3 scripts/make-icons.py` regenerates the included PNGs with Python’s standard library.
 
 ## Setup references
 

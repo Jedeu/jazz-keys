@@ -42,9 +42,17 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: -5px; }
 .reset-button:disabled { opacity: .4; cursor: default; }
 .status-dot { width: 5px; height: 5px; border-radius: 50%; background: #697069; }
 .status-dot.awake { background: var(--accent); }
-/* Fourteen white keys, each about six widths long. Shrink only when the
-   viewport is too short; otherwise the unused space stays above the strip. */
-.keyboard { position: relative; flex: 0 1 auto; height: calc((100vw - env(safe-area-inset-left) - env(safe-area-inset-right)) * 6 / 14); min-height: 0; isolation: isolate; touch-action: none; }
+/* User-selected layout: white keys occupy exactly two-thirds of the visible
+   viewport height. The strip and inactive space sit above, not inside, this height. */
+.keyboard {
+  position: relative;
+  flex: 0 0 auto;
+  height: calc(100vh * 2 / 3);
+  height: calc(100dvh * 2 / 3);
+  min-height: 0;
+  isolation: isolate;
+  touch-action: none;
+}
 .key {
   position: absolute;
   top: 0;
@@ -58,8 +66,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: -5px; }
   overflow: hidden;
 }
 .key.white {
-  left: calc(var(--position) * 100% / 14);
-  width: calc(100% / 14);
+  left: calc(var(--position) * 100% / var(--white-key-count));
+  width: calc(100% / var(--white-key-count));
   height: 100%;
   z-index: 1;
   background: #303631;
@@ -69,8 +77,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: -5px; }
 }
 .key.white:last-of-type { border-right: 0; }
 .key.black {
-  left: calc((var(--position) - .31) * 100% / 14);
-  width: calc(.62 * 100% / 14);
+  left: calc((var(--position) - .31) * 100% / var(--white-key-count));
+  width: calc(.62 * 100% / var(--white-key-count));
   height: 61%;
   z-index: 2;
   background: #525b54;

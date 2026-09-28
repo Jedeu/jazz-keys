@@ -61,7 +61,7 @@ const contacts = new NoteContacts({
 });
 
 let whiteIndex = 0;
-for (let note = 48; note <= 71; note++) {
+for (let note = 48; note <= 83; note++) {
   const black = blackPitches.has(note % 12);
   const octave = Math.floor(note / 12) - 1;
   const key = document.createElement("button");
@@ -108,6 +108,7 @@ for (let note = 48; note <= 71; note++) {
     setTimeout(() => contacts.end(id), 180);
   });
 }
+keyboard.style.setProperty("--white-key-count", whiteIndex);
 keyboard.inert = true;
 
 function measureKeys() {

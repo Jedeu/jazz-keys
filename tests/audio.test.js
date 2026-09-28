@@ -48,10 +48,24 @@ function setup(t) {
   return audio;
 }
 
-test("standard pitch, C3 and B4", () => {
+test("standard pitch across C3 through B5", () => {
   assert.equal(frequencyFor(69), 440);
   assert.ok(Math.abs(frequencyFor(48) - 130.8128) < 0.001);
   assert.ok(Math.abs(frequencyFor(71) - 493.8833) < 0.001);
+  assert.ok(Math.abs(frequencyFor(83) - 987.7666) < 0.001);
+});
+test("all three octaves schedule valid decay envelopes", async (t) => {
+  const audio = setup(t);
+  await audio.resume();
+  for (let note = 48; note <= 83; note++) {
+    audio.noteOn(note);
+    const voice = audio.active.get(note);
+    assert.equal(voice.oscillator.frequency.value, frequencyFor(note));
+    assert.ok(voice.oscillator.stopped > 0.9, "the tone ramp must finish before the voice ends");
+    assert.ok(voice.points.every(([time, value], index) => value > 0
+      && (index === 0 || time > voice.points[index - 1][0])));
+    audio.noteOff(note);
+  }
 });
 test("fallback envelope follows exponential ramps", () => {
   assert.equal(envelopeAt([[0, 1], [2, 0.01]], 1), 0.1);
@@ -117,7 +131,7 @@ test("old release-tail cleanup cannot delete a retriggered voice", async (t) => 
 test("fast glissandi have bounded polyphony; hiding destroys every voice", async (t) => {
   const audio = setup(t);
   await audio.resume();
-  for (let i = 0; i < 100; i++) audio.noteOn(48 + i % 24);
+  for (let i = 0; i < 100; i++) audio.noteOn(48 + i % 36);
   assert.equal(audio.sounding.size, MAX_VOICES);
   const voices = [...audio.sounding];
   audio.silence({ suspend: true });

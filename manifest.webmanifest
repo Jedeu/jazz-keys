@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Jazz Chord Keyboard",
   "short_name": "Jazz Keys",
-  "description": "A quiet, two-octave piano for jazz voicings. No samples. No distractions.",
+  "description": "A quiet, three-octave piano for jazz voicings. No samples. No distractions.",
   "lang": "en",
   "start_url": "./",
   "scope": "./",
