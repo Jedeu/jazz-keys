@@ -1,5 +1,6 @@
 // Optional integration test using an ALREADY installed Chrome and Node 22+.
 // No packages or browsers are downloaded. Run: node scripts/browser-smoke.mjs
+// To check a hosted deployment instead: APP_URL=https://.../ node scripts/browser-smoke.mjs
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
@@ -11,7 +12,8 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const chromePath = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const profile = await mkdtemp(join(tmpdir(), "jazz-keys-chrome-"));
-const server = spawn(process.execPath, ["scripts/serve.mjs"], { cwd: root, env: { ...process.env, PORT: "4179" } });
+const appUrl = process.env.APP_URL || "http://127.0.0.1:4179/";
+const server = process.env.APP_URL ? null : spawn(process.execPath, ["scripts/serve.mjs"], { cwd: root, env: { ...process.env, PORT: "4179" } });
 const chrome = spawn(chromePath, ["--headless=new", "--no-first-run", "--no-default-browser-check", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"]);
 let ws;
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -88,7 +90,7 @@ try {
       createOscillator() { window.__oscillators++; return super.createOscillator(); }
     };
   ` });
-  await call("Page.navigate", { url: "http://127.0.0.1:4179/" });
+  await call("Page.navigate", { url: appUrl });
   await until('document.querySelectorAll(".key").length === 24');
   await until('document.querySelector("#offline-state").textContent === "Ready for offline" && navigator.serviceWorker.controller');
   assert.equal(await evaluate('document.querySelectorAll(".white").length'), 14);
@@ -148,9 +150,9 @@ try {
 } finally {
   ws?.close();
   for (const { timer } of pending.values()) clearTimeout(timer);
-  const stopped = [chrome, server].map((child) => child.pid && child.exitCode === null ? once(child, "exit").catch(() => {}) : Promise.resolve());
+  const stopped = [chrome, server].filter(Boolean).map((child) => child.pid && child.exitCode === null ? once(child, "exit").catch(() => {}) : Promise.resolve());
   chrome.kill();
-  server.kill();
+  server?.kill();
   await Promise.all(stopped);
   await rm(profile, { recursive: true, force: true });
 }

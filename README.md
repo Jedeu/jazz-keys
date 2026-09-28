@@ -2,6 +2,19 @@
 
 A tiny, dependency-free piano for iPad. No App Store, paid tools, build step, samples, analytics, accounts in the app, or third-party requests.
 
+## Open it on your iPad
+
+**App URL: https://jedeu.github.io/jazz-keys/**
+
+GitHub Pages hosts the app. No local server or running computer is needed.
+
+1. Open the URL in **Safari**, rotate to landscape, and wait for **Ready for offline**.
+2. Choose **Share → Add to Home Screen**. Enable **Open as Web App** if offered.
+3. Open the new **Jazz Keys** icon while still online and wait for **Ready for offline** again.
+4. Tap **Tap to play**. Test an offline launch using Airplane Mode.
+
+The site and [source repository](https://github.com/Jedeu/jazz-keys) are public.
+
 ## Try it on this Mac
 
 If Node is already installed:
@@ -18,7 +31,7 @@ Alternatively, if Python is already installed, run `python3 -m http.server 4173 
 
 **The one catch:** Safari needs an **HTTPS URL** to cache a Home Screen app for offline use. A local file, email attachment, or `http://192.168…` address does not provide this. Once hosted, the app runs on your iPad; your computer and local preview server can stay off.
 
-One free, browser-only option is GitHub Pages:
+The existing app URL above is already configured. To create a separate deployment using free GitHub Pages:
 
 1. Sign in to GitHub and create a **public** repository, such as `jazz-keys`. Only hosting setup needs a GitHub account; the piano does not.
 2. Use **Add file → Upload files** to upload `index.html`, `styles.css`, `sw.js`, `manifest.webmanifest`, the entire `src/` and `icons/` folders, and `.nojekyll`. Keep their directory structure. Commit the files. The tests, scripts, and package file are not needed on the host.
@@ -83,6 +96,8 @@ Optional real-browser smoke test with **already installed Chrome** and Node 22+:
 
 ```sh
 node scripts/browser-smoke.mjs
+# Check the live deployment without starting a local server:
+APP_URL=https://jedeu.github.io/jazz-keys/ node scripts/browser-smoke.mjs
 # Other Chrome location:
 CHROME_BIN=/path/to/chrome node scripts/browser-smoke.mjs
 ```
